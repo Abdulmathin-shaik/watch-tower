@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}WatchTower Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-tachometer-alt"></i> WatchTower Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Sensors</h5>
+                    <h2 class="display-4">{{ total_sensors }}</h2>
+                    <p class="card-text">Active monitoring devices</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Active Alerts</h5>
+                    <h2 class="display-4">{{ active_alerts }}</h2>
+                    <p class="card-text">Unacknowledged alerts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Organizations</h5>
+                    <h2 class="display-4">{{ organizations.count }}</h2>
+                    <p class="card-text">Connected organizations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensor Status -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sensor Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sensorStatusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Alerts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Sensor</th>
+                                    <th>Severity</th>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentAlerts">
+                                <!-- Populated via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organizations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Your Organizations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for org in organizations %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ org.name }}</h5>
+                                    <p class="card-text">{{ org.description|truncatewords:20 }}</p>
+                                    <a href="{% url 'sensor:org_sensor_list' org.id %}" class="btn btn-primary">
+                                        View Sensors
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Sensor Status Chart
+    const statusCtx = document.getElementById('sensorStatusChart').getContext('2d');
+    const statusData = {{ sensors_by_status|safe }};
+    
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: statusData.map(item => item.status),
+            datasets: [{
+                data: statusData.map(item => item.count),
+                backgroundColor: [
+                    '#28a745',  // active
+                    '#dc3545',  // inactive
+                    '#ffc107',  // maintenance
+                    '#6c757d'   // error
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+
+    // Function to fetch and update recent alerts
+    function updateRecentAlerts() {
+        fetch('/sensor/alerts/recent/')
+            .then(response => response.json())
+            .then(alerts => {
+                const tbody = document.getElementById('recentAlerts');
+                tbody.innerHTML = alerts.map(alert => `
+                    <tr>
+                        <td>${alert.sensor_name}</td>
+                        <td><span class="badge bg-${alert.severity}">${alert.severity}</span></td>
+                        <td>${new Date(alert.timestamp).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="acknowledgeAlert(${alert.id})">
+                                Acknowledge
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    }
+
+    // Update alerts every minute
+    updateRecentAlerts();
+    setInterval(updateRecentAlerts, 60000);
+
+    // Function to acknowledge alerts
+    function acknowledgeAlert(alertId) {
+        fetch(`/sensor/alert/${alertId}/acknowledge/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                updateRecentAlerts();
+            }
+        });
+    }
+</script>
+{% endblock %} 
