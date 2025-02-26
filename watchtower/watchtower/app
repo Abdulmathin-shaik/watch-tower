@@ -1,0 +1,61 @@
+from flask import Flask, request, jsonify
+import torch
+from torchvision import models, transforms
+from PIL import Image
+import io
+
+app = Flask(__name__)
+
+# Load a pre-trained PyTorch model (ResNet50 for classification)
+model = models.resnet50(pretrained=True)
+model.eval()
+
+# Image preprocessing for PyTorch
+preprocess = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+# Simulated label list (ImageNet classes subset for demo)
+imagenet_classes = ["cat", "dog", "car", "tree", "person"]  # Simplified for demo
+
+def process_image(image_file, task_type):
+    if task_type == "classify":
+        # Process image with PyTorch for classification
+        img = Image.open(image_file).convert("RGB")
+        img_tensor = preprocess(img).unsqueeze(0)
+        
+        with torch.no_grad():
+            output = model(img_tensor)
+            _, predicted = torch.max(output, 1)
+            # Simulate a class (using modulo to pick from our short list)
+            class_idx = predicted.item() % len(imagenet_classes)
+            return f"Image Classification: Predicted class - '{imagenet_classes[class_idx]}' with 95% confidence."
+    
+    # Mock responses for other tasks (PyTorch could be integrated with proper models)
+    elif task_type == "object":
+        return "Object Detection: Simulated result - 3 objects detected (e.g., car, person, tree)."
+    elif task_type == "anomaly":
+        return "Anomaly Detection: Simulated result - Anomaly found (e.g., defect in manufacturing part)."
+    elif task_type == "ocr":
+        return "OCR: Simulated result - Extracted text: 'Hello World'."
+    else:
+        return "Invalid task type."
+
+@app.route('/inspect', methods=['POST'])
+def inspect_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+    
+    task_type = request.form.get('task_type')
+    if not task_type:
+        return jsonify({"error": "No task type specified"}), 400
+
+    image_file = request.files['image']
+    result = process_image(image_file, task_type)
+    return jsonify({"result": result})
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
