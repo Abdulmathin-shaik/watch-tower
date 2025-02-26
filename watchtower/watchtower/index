@@ -177,25 +177,31 @@
         }
 
         function runInspection(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
             const resultText = document.getElementById(`${type}Result`);
-            let message;
+            const file = fileInput.files[0];
 
-            switch(type) {
-                case 'object':
-                    message = "Object Detection: Simulated result - 3 objects detected (e.g., car, person, tree).";
-                    break;
-                case 'classify':
-                    message = "Image Classification: Simulated result - Positive (e.g., 'Cat' with 95% confidence).";
-                    break;
-                case 'anomaly':
-                    message = "Anomaly Detection: Simulated result - Anomaly found (e.g., defect in manufacturing part).";
-                    break;
-                case 'ocr':
-                    message = "OCR: Simulated result - Extracted text: 'Hello World'.";
-                    break;
+            if (!file) {
+                resultText.textContent = "Please upload an image first.";
+                return;
             }
 
-            resultText.textContent = message;
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('task_type', type);
+
+            fetch('http://localhost:5000/inspect', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultText.textContent = data.result || data.error;
+            })
+            .catch(error => {
+                resultText.textContent = "Error connecting to server.";
+                console.error(error);
+            });
         }
     </script>
 </body>
