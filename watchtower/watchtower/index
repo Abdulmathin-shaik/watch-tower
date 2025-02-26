@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionDetect - AI Vision Inspection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .vision-option {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .upload-section {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .results img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .results div {
+            margin-top: 10px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #2c3e50;
+            color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>VisionDetect</h1>
+        <p>Advanced Deep Learning Vision Solutions</p>
+    </header>
+    
+    <main>
+        <section class="vision-option" id="object-detection">
+            <h2>Object Detection</h2>
+            <div class="upload-section">
+                <label for="objectUpload">Upload Image:</label>
+                <input type="file" id="objectUpload" accept="image/*">
+                <button onclick="previewImage('object')">Preview</button>
+                <button onclick="runInspection('object')">Run Detection</button>
+            </div>
+            <div class="results">
+                <img id="objectPreview" src="" alt="Object Detection Preview" style="display: none;">
+                <div id="objectResult">Results will appear here.</div>
+            </div>
+        </section>
+
+        <section class="vision-option" id="image-classification">
+            <h2>Image Classification</h2>
+            <div class="upload-section">
+                <label for="classifyUpload">Upload Image:</label>
+                <input type="file" id="classifyUpload" accept="image/*">
+                <button onclick="previewImage('classify')">Preview</button>
+                <button onclick="runInspection('classify')">Run Classification</button>
+            </div>
+            <div class="results">
+                <img id="classifyPreview" src="" alt="Classification Preview" style="display: none;">
+                <div id="classifyResult">Results will appear here.</div>
+            </div>
+        </section>
+
+        <section class="vision-option" id="anomaly-detection">
+            <h2>Anomaly Detection</h2>
+            <div class="upload-section">
+                <label for="anomalyUpload">Upload Image:</label>
+                <input type="file" id="anomalyUpload" accept="image/*">
+                <button onclick="previewImage('anomaly')">Preview</button>
+                <button onclick="runInspection('anomaly')">Run Detection</button>
+            </div>
+            <div class="results">
+                <img id="anomalyPreview" src="" alt="Anomaly Detection Preview" style="display: none;">
+                <div id="anomalyResult">Results will appear here.</div>
+            </div>
+        </section>
+
+        <section class="vision-option" id="ocr">
+            <h2>OCR (Text Recognition)</h2>
+            <div class="upload-section">
+                <label for="ocrUpload">Upload Image:</label>
+                <input type="file" id="ocrUpload" accept="image/*">
+                <button onclick="previewImage('ocr')">Preview</button>
+                <button onclick="runInspection('ocr')">Run OCR</button>
+            </div>
+            <div class="results">
+                <img id="ocrPreview" src="" alt="OCR Preview" style="display: none;">
+                <div id="ocrResult">Results will appear here.</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 VisionDetect. Inspired by cutting-edge vision tech.</p>
+    </footer>
+
+    <script>
+        function previewImage(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
+            const preview = document.getElementById(`${type}Preview`);
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function runInspection(type) {
+            const resultText = document.getElementById(`${type}Result`);
+            let message;
+
+            switch(type) {
+                case 'object':
+                    message = "Object Detection: Simulated result - 3 objects detected (e.g., car, person, tree).";
+                    break;
+                case 'classify':
+                    message = "Image Classification: Simulated result - Positive (e.g., 'Cat' with 95% confidence).";
+                    break;
+                case 'anomaly':
+                    message = "Anomaly Detection: Simulated result - Anomaly found (e.g., defect in manufacturing part).";
+                    break;
+                case 'ocr':
+                    message = "OCR: Simulated result - Extracted text: 'Hello World'.";
+                    break;
+            }
+
+            resultText.textContent = message;
+        }
+    </script>
+</body>
+</html>
