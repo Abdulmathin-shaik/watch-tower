@@ -144,11 +144,50 @@
             }
         }
 
-        function runInspection() {
+        async function runInspection() {
+            const fileInput = document.getElementById('imageUpload');
             const model = document.getElementById('modelSelect').value;
             const resultText = document.getElementById('resultText');
-            resultText.innerText = `Running ${model} model... (Simulated result)`;
-            // Backend integration would go here for actual processing
+            const preview = document.getElementById('preview');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                resultText.innerText = "Please upload an image first.";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", file);
+            formData.append("model", model);
+
+            resultText.innerText = "Processing...";
+
+            try {
+                const response = await fetch("http://localhost:5000/api/process", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    resultText.innerText = result.error;
+                    return;
+                }
+
+                if (model === "defect") {
+                    preview.src = result.annotated_image;
+                    preview.style.display = "block";
+                    resultText.innerText = "Detections:\n" + result.detections
+                        .map(d => `${d.label}: ${d.score.toFixed(2)}`)
+                        .join("\n");
+                } else if (model === "classify") {
+                    resultText.innerText = `Classified as: ${result.label}`;
+                } else {
+                    resultText.innerText = "Segmentation not implemented yet.";
+                }
+            } catch (error) {
+                resultText.innerText = "Error: " + error.message;
+            }
         }
     </script>
 </body>
