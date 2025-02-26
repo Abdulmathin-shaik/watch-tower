@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Add this import
 import torch
 from torchvision import models, transforms
 from PIL import Image
@@ -8,6 +9,7 @@ import cv2
 import numpy as np
 
 app = Flask(__name__)
+CORS(app)  # Add this line to enable CORS
 
 # Load Faster R-CNN for object detection
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -122,4 +124,4 @@ def process_image():
     return jsonify(result)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="127.0.0.1", port=5000)
