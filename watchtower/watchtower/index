@@ -11,7 +11,6 @@
             padding: 0;
             background-color: #f8f9fa;
             color: #2d3748;
-            line-height: 1.6;
         }
 
         header {
@@ -25,69 +24,53 @@
         header h1 {
             margin: 0;
             font-size: 2.5rem;
-            font-weight: 600;
         }
 
         header p {
             margin: 0.5rem 0 0;
-            font-size: 1.1rem;
             color: #a0aec0;
         }
 
         .tab-nav {
             max-width: 1200px;
-            margin: 20px auto 0;
-            padding: 0 20px;
+            margin: 20px auto;
             display: flex;
-            justify-content: center;
             gap: 10px;
+            padding: 0 20px;
         }
 
-        .tab-button {
+        .tab-nav button {
             background-color: #e2e8f0;
             color: #4a5568;
             border: none;
-            padding: 12px 25px;
+            padding: 12px 20px;
             border-radius: 6px 6px 0 0;
             font-size: 1rem;
-            font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: background-color 0.3s ease;
         }
 
-        .tab-button.active {
+        .tab-nav button.active {
             background-color: #4c51bf;
             color: #fff;
         }
 
-        .tab-button:hover:not(.active) {
+        .tab-nav button:hover:not(.active) {
             background-color: #cbd5e0;
         }
 
-        main {
+        .tab-content {
             max-width: 1200px;
-            margin: 0 auto 40px;
+            margin: 0 auto;
             padding: 20px;
-        }
-
-        .vision-tab {
-            background: #fff;
-            padding: 25px;
-            border-radius: 0 12px 12px 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             display: none;
+            background: #fff;
+            border-radius: 0 8px 8px 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .vision-tab.active {
+        .tab-content.active {
             display: block;
-        }
-
-        .vision-tab h2 {
-            margin: 0 0 20px;
-            font-size: 1.5rem;
-            color: #2d3748;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
         }
 
         .upload-section {
@@ -95,11 +78,11 @@
         }
 
         label {
-            display: block;
             font-size: 1rem;
             font-weight: 500;
             color: #4a5568;
             margin-bottom: 8px;
+            display: block;
         }
 
         input[type="file"] {
@@ -123,7 +106,6 @@
             padding: 10px 20px;
             border-radius: 6px;
             font-size: 0.9rem;
-            font-weight: 500;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
@@ -157,25 +139,24 @@
             position: fixed;
             bottom: 0;
             width: 100%;
-            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <header>
         <h1>VisionDetect</h1>
-        <p>Advanced Deep Learning Vision Solutions</p>
+        <p>Precision AI Vision Tools</p>
     </header>
 
     <div class="tab-nav">
-        <button class="tab-button active" onclick="showTab('object-detection')">Object Detection</button>
-        <button class="tab-button" onclick="showTab('image-classification')">Image Classification</button>
-        <button class="tab-button" onclick="showTab('anomaly-detection')">Anomaly Detection</button>
-        <button class="tab-button" onclick="showTab('ocr')">OCR</button>
+        <button class="active" onclick="openTab('object')">Object Detection</button>
+        <button onclick="openTab('classify')">Image Classification</button>
+        <button onclick="openTab('anomaly')">Anomaly Detection</button>
+        <button onclick="openTab('ocr')">OCR</button>
     </div>
-    
+
     <main>
-        <section class="vision-tab active" id="object-detection">
+        <div class="tab-content active" id="object">
             <h2>Object Detection</h2>
             <div class="upload-section">
                 <label for="objectUpload">Upload Image</label>
@@ -189,9 +170,9 @@
                 <img id="objectPreview" src="" alt="Object Detection Preview" style="display: none;">
                 <div id="objectResult">Results will appear here.</div>
             </div>
-        </section>
+        </div>
 
-        <section class="vision-tab" id="image-classification">
+        <div class="tab-content" id="classify">
             <h2>Image Classification</h2>
             <div class="upload-section">
                 <label for="classifyUpload">Upload Image</label>
@@ -205,9 +186,9 @@
                 <img id="classifyPreview" src="" alt="Classification Preview" style="display: none;">
                 <div id="classifyResult">Results will appear here.</div>
             </div>
-        </section>
+        </div>
 
-        <section class="vision-tab" id="anomaly-detection">
+        <div class="tab-content" id="anomaly">
             <h2>Anomaly Detection</h2>
             <div class="upload-section">
                 <label for="anomalyUpload">Upload Image</label>
@@ -221,9 +202,9 @@
                 <img id="anomalyPreview" src="" alt="Anomaly Detection Preview" style="display: none;">
                 <div id="anomalyResult">Results will appear here.</div>
             </div>
-        </section>
+        </div>
 
-        <section class="vision-tab" id="ocr">
+        <div class="tab-content" id="ocr">
             <h2>OCR (Text Recognition)</h2>
             <div class="upload-section">
                 <label for="ocrUpload">Upload Image</label>
@@ -237,26 +218,27 @@
                 <img id="ocrPreview" src="" alt="OCR Preview" style="display: none;">
                 <div id="ocrResult">Results will appear here.</div>
             </div>
-        </section>
+        </div>
     </main>
 
     <footer>
-        <p>© 2025 VisionDetect. Inspired by cutting-edge vision tech.</p>
+        <p>© 2025 VisionDetect. Built for precision.</p>
     </footer>
 
     <script>
-        function showTab(tabId) {
-            // Hide all tabs and remove active class from buttons
-            document.querySelectorAll('.vision-tab').forEach(tab => {
+        function openTab(tabName) {
+            const tabs = document.getElementsByClassName('tab-content');
+            const buttons = document.getElementsByClassName('tab-nav')[0].getElementsByTagName('button');
+            
+            for (let tab of tabs) {
                 tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-button').forEach(button => {
+            }
+            for (let button of buttons) {
                 button.classList.remove('active');
-            });
+            }
 
-            // Show selected tab and highlight its button
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
         }
 
         function previewImage(type) {
@@ -274,26 +256,21 @@
             }
         }
 
-        function runInspection(type) {
+        async function runInspection(type) {
             const resultText = document.getElementById(`${type}Result`);
-            let message;
+            resultText.textContent = "Processing...";
 
-            switch(type) {
-                case 'object':
-                    message = "Object Detection: Simulated result - 3 objects detected (e.g., car, person, tree).";
-                    break;
-                case 'classify':
-                    message = "Image Classification: Simulated result - Positive (e.g., 'Cat' with 95% confidence).";
-                    break;
-                case 'anomaly':
-                    message = "Anomaly Detection: Simulated result - Anomaly found (e.g., defect in manufacturing part).";
-                    break;
-                case 'ocr':
-                    message = "OCR: Simulated result - Extracted text: 'Hello World'.";
-                    break;
+            try {
+                const response = await fetch('http://localhost:5000/api/inspect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                const data = await response.json();
+                resultText.textContent = data.result;
+            } catch (error) {
+                resultText.textContent = "Error connecting to backend.";
             }
-
-            resultText.textContent = message;
         }
     </script>
 </body>
