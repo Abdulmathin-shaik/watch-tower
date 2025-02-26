@@ -1,167 +1,89 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import torch
-from torchvision import models, transforms
+import torchvision.models as models
+import torchvision.transforms as transforms
 from PIL import Image
 import io
-import base64
 import cv2
 import numpy as np
+import pytesseract
+import yolov5  # Assuming yolov5 is installed
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for cross-origin requests
+CORS(app)
 
-# Device setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Load models
+# Object Detection (YOLOv5)
+yolo_model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
-# Load Faster R-CNN for object detection
-detector = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-detector.eval()
-detector.to(device)
+# Image Classification (ResNet50)
+classify_model = models.resnet50(pretrained=True)
+classify_model.eval()
+with open('imagenet_classes.txt', 'r') as f:  # You'll need this file with ImageNet class names
+    imagenet_classes = [line.strip() for line in f.readlines()]
 
-# Load MobileNetV2 for image classification
-classifier = models.mobilenet_v2(pretrained=True)
-classifier.eval()
-classifier.to(device)
+# Preprocessing for classification
+preprocess = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
-# Load a simple autoencoder for anomaly detection (simulated, not trained)
-autoencoder = models.resnet18(pretrained=True)  # Using ResNet as a placeholder
-autoencoder.eval()
-autoencoder.to(device)
+@app.route('/api/inspect', methods=['POST'])
+def inspect():
+    if 'image' not in request.files:
+        return jsonify({'result': 'No image uploaded.'}), 400
 
-# Placeholder for OCR (mocked, could use a CRNN model if trained)
-# No pre-trained PyTorch OCR model available, so we simulate
-ocr_model = None  # Placeholder; real OCR would need Tesseract or custom CRNN
+    image_file = request.files['image']
+    inspection_type = request.form['type']
+    image = Image.open(io.BytesIO(image_file.read())).convert('RGB')
+    img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-# ImageNet class labels for classification (you’ll need this file)
-# Download from: https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt
-with open("imagenet_classes.txt", "r") as f:
-    imagenet_labels = [line.strip() for line in f.readlines()]
+    if inspection_type == 'object':
+        # Object Detection with YOLOv5
+        results = yolo_model(image)
+        detections = results.pandas().xyxy[0]  # Get detections as a DataFrame
+        if len(detections) > 0:
+            output = f"Detected {len(detections)} objects: "
+            output += ", ".join([f"{row['name']} ({row['confidence']:.2f})" for _, row in detections.iterrows()])
+        else:
+            output = "No objects detected."
+        return jsonify({'result': output})
 
-# COCO class names for object detection
-COCO_NAMES = [
-    '__background__', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-    'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign',
-    'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
-    'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag',
-    'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite',
-    'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-    'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana',
-    'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
-    'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table',
-    'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
-    'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock',
-    'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-]
+    elif inspection_type == 'classify':
+        # Image Classification with ResNet50
+        input_tensor = preprocess(image).unsqueeze(0)
+        with torch.no_grad():
+            output = classify_model(input_tensor)
+            probabilities = torch.nn.functional.softmax(output[0], dim=0)
+            top_prob, top_idx = probabilities.topk(1)
+            label = imagenet_classes[top_idx[0]]
+            confidence = top_prob[0].item()
+        return jsonify({'result': f"Classified as '{label}' with {confidence:.2%} confidence."})
 
-# Preprocessing functions
-def preprocess_detection(image):
-    transform = transforms.Compose([transforms.ToTensor()])
-    return transform(image).unsqueeze(0).to(device)
+    elif inspection_type == 'anomaly':
+        # Anomaly Detection (simple thresholding example)
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        anomalies = cv2.countNonZero(thresh)
+        if anomalies > 1000:  # Arbitrary threshold for demo
+            output = "Anomaly detected: Significant deviations found."
+        else:
+            output = "No significant anomalies detected."
+        return jsonify({'result': output})
 
-def preprocess_classification(image):
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    return transform(image).unsqueeze(0).to(device)
+    elif inspection_type == 'ocr':
+        # OCR with Tesseract
+        text = pytesseract.image_to_string(img_cv)
+        if text.strip():
+            output = f"Extracted text: '{text.strip()}'"
+        else:
+            output = "No text detected."
+        return jsonify({'result': output})
 
-def preprocess_anomaly(image):
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    return transform(image).unsqueeze(0).to(device)
+    return jsonify({'result': 'Invalid inspection type.'}), 400
 
-def preprocess_ocr(image):
-    transform = transforms.Compose([transforms.ToTensor()])
-    return transform(image).unsqueeze(0).to(device)
-
-# Process object detection
-def detect_objects(image_tensor, threshold=0.5):
-    with torch.no_grad():
-        predictions = detector(image_tensor)[0]
-    
-    boxes = predictions["boxes"].cpu().numpy()
-    labels = predictions["labels"].cpu().numpy()
-    scores = predictions["scores"].cpu().numpy()
-
-    mask = scores >= threshold
-    boxes = boxes[mask]
-    labels = labels[mask]
-    scores = scores[mask]
-
-    return boxes, labels, scores
-
-# Draw bounding boxes
-def draw_boxes(image, boxes, labels, scores):
-    img = np.array(image)[:, :, ::-1].copy()  # RGB to BGR for OpenCV
-    for box, label, score in zip(boxes, labels, scores):
-        x1, y1, x2, y2 = box.astype(int)
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        label_text = f"{COCO_NAMES[label]}: {score:.2f}"
-        cv2.putText(img, label_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    
-    _, buffer = cv2.imencode(".jpg", img)
-    return base64.b64encode(buffer).decode("utf-8")
-
-# Process image classification
-def classify_image(image_tensor):
-    with torch.no_grad():
-        output = classifier(image_tensor)
-        _, pred = torch.max(output, 1)
-        return imagenet_labels[pred.item()]
-
-# Process anomaly detection (simulated)
-def detect_anomaly(image_tensor):
-    with torch.no_grad():
-        # Simulate reconstruction error check (not implemented fully)
-        output = autoencoder(image_tensor)  # Placeholder
-        return "Anomaly Detection: Simulated - Anomaly detected (e.g., defect found)."
-
-# Process OCR (simulated)
-def extract_text(image_tensor):
-    # Placeholder; real OCR would need a trained CRNN or Tesseract
-    return "OCR: Simulated - Extracted text: 'Hello World'."
-
-@app.route("/inspect", methods=["POST"])
-def process_image():
-    if "image" not in request.files or "task_type" not in request.form:
-        return jsonify({"error": "Missing image or task type"}), 400
-
-    image_file = request.files["image"]
-    task_type = request.form["task_type"]
-    image = Image.open(image_file).convert("RGB")
-
-    if task_type == "object":
-        image_tensor = preprocess_detection(image)
-        boxes, labels, scores = detect_objects(image_tensor)
-        annotated_image = draw_boxes(image, boxes, labels, scores)
-        result = {
-            "annotated_image": f"data:image/jpeg;base64,{annotated_image}",
-            "detections": [
-                {"label": COCO_NAMES[label], "score": float(score), "box": box.tolist()}
-                for box, label, score in zip(boxes, labels, scores)
-            ]
-        }
-    elif task_type == "classify":
-        image_tensor = preprocess_classification(image)
-        label = classify_image(image_tensor)
-        result = {"label": label}
-    elif task_type == "anomaly":
-        image_tensor = preprocess_anomaly(image)
-        anomaly_result = detect_anomaly(image_tensor)
-        result = {"result": anomaly_result}
-    elif task_type == "ocr":
-        image_tensor = preprocess_ocr(image)
-        text = extract_text(image_tensor)
-        result = {"text": text}
-    else:
-        return jsonify({"error": "Unsupported task type"}), 400
-
-    return jsonify(result)
-
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
