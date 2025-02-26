@@ -3,139 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchTower MFG</title>
+    <title>VisionDetect - AI Vision Suite</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            overflow-x: hidden;
+            background-color: #f8f9fa;
+            color: #2d3748;
+            line-height: 1.6;
         }
+
         header {
-            background: linear-gradient(90deg, #1e1e1e, #2c2c2c);
-            padding: 20px;
+            background-color: #1a202c;
+            color: #fff;
             text-align: center;
-            border-bottom: 2px solid #00ffcc;
-            box-shadow: 0 4px 10px rgba(0, 255, 204, 0.2);
+            padding: 2rem 0;
+            border-bottom: 4px solid #4a5568;
         }
+
         header h1 {
             margin: 0;
-            font-size: 2.5em;
-            color: #00ffcc;
-            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+            font-size: 2.5rem;
+            font-weight: 600;
         }
-        nav {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            padding: 15px;
-            background: #1e1e1e;
+
+        header p {
+            margin: 0.5rem 0 0;
+            font-size: 1.1rem;
+            color: #a0aec0;
         }
-        nav button {
-            background: #333;
-            border: 1px solid #00ffcc;
-            color: #00ffcc;
-            padding: 10px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        nav button:hover, nav button.active {
-            background: #00ffcc;
-            color: #0a0a0a;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.7);
-        }
+
         main {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 20px;
-            background: #1e1e1e;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.1);
-            min-height: 500px;
-            transition: all 0.5s ease;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
         }
-        .task-section {
-            display: none;
-            padding: 20px;
+
+        .vision-tab {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease;
         }
-        .task-section.active {
-            display: block;
+
+        .vision-tab:hover {
+            transform: translateY(-5px);
         }
+
+        .vision-tab h2 {
+            margin: 0 0 20px;
+            font-size: 1.5rem;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
         .upload-section {
             margin-bottom: 20px;
         }
+
         label {
             display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #00ffcc;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
         }
+
         input[type="file"] {
             width: 100%;
             padding: 10px;
-            background: #333;
-            border: 1px solid #00ffcc;
-            border-radius: 5px;
-            color: #e0e0e0;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f7fafc;
+            margin-bottom: 15px;
         }
-        .button-group button {
-            background: #00ffcc;
-            color: #0a0a0a;
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: #4c51bf;
+            color: #fff;
             border: none;
             padding: 10px 20px;
-            border-radius: 25px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
-            margin-right: 10px;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s ease;
         }
-        .button-group button:hover {
-            background: #00cc99;
-            box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+
+        button:hover {
+            background-color: #434190;
         }
+
         .results img {
             max-width: 100%;
-            border-radius: 10px;
+            height: auto;
+            border-radius: 8px;
             margin-top: 15px;
-            border: 1px solid #00ffcc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         .results div {
             margin-top: 15px;
-            padding: 15px;
-            background: #2c2c2c;
-            border-radius: 10px;
-            color: #e0e0e0;
-            border: 1px solid #00ffcc;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            color: #4a5568;
         }
+
         footer {
             text-align: center;
             padding: 15px;
-            background: #1e1e1e;
-            color: #00ffcc;
+            background-color: #1a202c;
+            color: #a0aec0;
             position: fixed;
             bottom: 0;
             width: 100%;
-            border-top: 1px solid #00ffcc;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>WatchTower MFG</h1>
+        <h1>VisionDetect</h1>
+        <p>Precision AI Vision Tools</p>
     </header>
-    <nav>
-        <button onclick="showTask('object')" class="active">Object Detection</button>
-        <button onclick="showTask('classify')">Image Classification</button>
-        <button onclick="showTask('anomaly')">Anomaly Detection</button>
-        <button onclick="showTask('ocr')">OCR</button>
-    </nav>
+    
     <main>
-        <section id="object" class="task-section active">
+        <section class="vision-tab" id="object-detection">
             <h2>Object Detection</h2>
             <div class="upload-section">
-                <label for="objectUpload">Upload Image:</label>
+                <label for="objectUpload">Upload Image</label>
                 <input type="file" id="objectUpload" accept="image/*">
                 <div class="button-group">
                     <button onclick="previewImage('object')">Preview</button>
@@ -148,10 +157,10 @@
             </div>
         </section>
 
-        <section id="classify" class="task-section">
+        <section class="vision-tab" id="image-classification">
             <h2>Image Classification</h2>
             <div class="upload-section">
-                <label for="classifyUpload">Upload Image:</label>
+                <label for="classifyUpload">Upload Image</label>
                 <input type="file" id="classifyUpload" accept="image/*">
                 <div class="button-group">
                     <button onclick="previewImage('classify')">Preview</button>
@@ -164,10 +173,10 @@
             </div>
         </section>
 
-        <section id="anomaly" class="task-section">
+        <section class="vision-tab" id="anomaly-detection">
             <h2>Anomaly Detection</h2>
             <div class="upload-section">
-                <label for="anomalyUpload">Upload Image:</label>
+                <label for="anomalyUpload">Upload Image</label>
                 <input type="file" id="anomalyUpload" accept="image/*">
                 <div class="button-group">
                     <button onclick="previewImage('anomaly')">Preview</button>
@@ -180,10 +189,10 @@
             </div>
         </section>
 
-        <section id="ocr" class="task-section">
+        <section class="vision-tab" id="ocr">
             <h2>OCR (Text Recognition)</h2>
             <div class="upload-section">
-                <label for="ocrUpload">Upload Image:</label>
+                <label for="ocrUpload">Upload Image</label>
                 <input type="file" id="ocrUpload" accept="image/*">
                 <div class="button-group">
                     <button onclick="previewImage('ocr')">Preview</button>
@@ -196,26 +205,17 @@
             </div>
         </section>
     </main>
+
     <footer>
-        <p>© 2025 WatchTower MFG</p>
+        <p>© 2025 VisionDetect. Built for precision.</p>
     </footer>
 
     <script>
-        function showTask(task) {
-            document.querySelectorAll('.task-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.getElementById(task).classList.add('active');
-            document.querySelectorAll('nav button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`nav button[onclick="showTask('${task}')"]`).classList.add('active');
-        }
-
         function previewImage(type) {
             const fileInput = document.getElementById(`${type}Upload`);
             const preview = document.getElementById(`${type}Preview`);
             const file = fileInput.files[0];
+            
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -227,42 +227,25 @@
         }
 
         function runInspection(type) {
-            const fileInput = document.getElementById(`${type}Upload`);
             const resultText = document.getElementById(`${type}Result`);
-            const preview = document.getElementById(`${type}Preview`);
-            const file = fileInput.files[0];
+            let message;
 
-            if (!file) {
-                resultText.textContent = "Please upload an image first.";
-                return;
+            switch(type) {
+                case 'object':
+                    message = "Object Detection: Simulated result - 3 objects detected (e.g., car, person, tree).";
+                    break;
+                case 'classify':
+                    message = "Image Classification: Simulated result - Positive (e.g., 'Cat' with 95% confidence).";
+                    break;
+                case 'anomaly':
+                    message = "Anomaly Detection: Simulated result - Anomaly found (e.g., defect in manufacturing part).";
+                    break;
+                case 'ocr':
+                    message = "OCR: Simulated result - Extracted text: 'Hello World'.";
+                    break;
             }
 
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('task_type', type);
-
-            fetch('http://localhost:5000/inspect', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (type === 'object' && data.annotated_image) {
-                    preview.src = data.annotated_image;
-                    preview.style.display = 'block';
-                    resultText.textContent = data.detections.map(d => `${d.label}: ${d.score}`).join(', ');
-                } else {
-                    resultText.textContent = data.label || data.result || data.text || data.error;
-                    preview.style.display = 'block';
-                }
-            })
-            .catch(error => {
-                resultText.textContent = "Error: Could not connect to server or process image.";
-                console.error(error);
-            });
+            resultText.textContent = message;
         }
     </script>
 </body>
