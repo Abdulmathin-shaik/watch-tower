@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VisionDetect - AI Vision Suite</title>
     <style>
+        /* Same CSS as before, no changes needed */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -257,19 +258,29 @@
         }
 
         async function runInspection(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
             const resultText = document.getElementById(`${type}Result`);
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                resultText.textContent = "Please upload an image first.";
+                return;
+            }
+
             resultText.textContent = "Processing...";
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', type);
 
             try {
                 const response = await fetch('http://localhost:5000/api/inspect', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type })
+                    body: formData
                 });
                 const data = await response.json();
                 resultText.textContent = data.result;
             } catch (error) {
-                resultText.textContent = "Error connecting to backend.";
+                resultText.textContent = "Error processing image: " + error.message;
             }
         }
     </script>
