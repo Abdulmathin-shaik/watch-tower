@@ -34,25 +34,52 @@
             color: #a0aec0;
         }
 
+        .tab-nav {
+            max-width: 1200px;
+            margin: 20px auto 0;
+            padding: 0 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .tab-button {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px 6px 0 0;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .tab-button.active {
+            background-color: #4c51bf;
+            color: #fff;
+        }
+
+        .tab-button:hover:not(.active) {
+            background-color: #cbd5e0;
+        }
+
         main {
             max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
+            margin: 0 auto 40px;
+            padding: 20px;
         }
 
         .vision-tab {
             background: #fff;
             padding: 25px;
-            border-radius: 12px;
+            border-radius: 0 12px 12px 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s ease;
+            display: none;
         }
 
-        .vision-tab:hover {
-            transform: translateY(-5px);
+        .vision-tab.active {
+            display: block;
         }
 
         .vision-tab h2 {
@@ -137,11 +164,18 @@
 <body>
     <header>
         <h1>VisionDetect</h1>
-        <p>Precision AI Vision Tools</p>
+        <p>Advanced Deep Learning Vision Solutions</p>
     </header>
+
+    <div class="tab-nav">
+        <button class="tab-button active" onclick="showTab('object-detection')">Object Detection</button>
+        <button class="tab-button" onclick="showTab('image-classification')">Image Classification</button>
+        <button class="tab-button" onclick="showTab('anomaly-detection')">Anomaly Detection</button>
+        <button class="tab-button" onclick="showTab('ocr')">OCR</button>
+    </div>
     
     <main>
-        <section class="vision-tab" id="object-detection">
+        <section class="vision-tab active" id="object-detection">
             <h2>Object Detection</h2>
             <div class="upload-section">
                 <label for="objectUpload">Upload Image</label>
@@ -207,10 +241,24 @@
     </main>
 
     <footer>
-        <p>© 2025 VisionDetect. Built for precision.</p>
+        <p>© 2025 VisionDetect. Inspired by cutting-edge vision tech.</p>
     </footer>
 
     <script>
+        function showTab(tabId) {
+            // Hide all tabs and remove active class from buttons
+            document.querySelectorAll('.vision-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab and highlight its button
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
+        }
+
         function previewImage(type) {
             const fileInput = document.getElementById(`${type}Upload`);
             const preview = document.getElementById(`${type}Preview`);
@@ -249,4 +297,4 @@
         }
     </script>
 </body>
-	</html>
+</html>
