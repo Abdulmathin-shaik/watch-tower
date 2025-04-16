@@ -12,4 +12,5 @@ urlpatterns = [
     path('sensor/<int:sensor_id>/analytics/', views.sensor_analytics, name='sensor_analytics'),
     path('alerts/', views.alerts, name='alerts'),
     path('alert/<int:alert_id>/acknowledge/', views.acknowledge_alert, name='acknowledge_alert'),
+    path('sensor/add/', views.add_sensor, name='add_sensor'),
 ] 

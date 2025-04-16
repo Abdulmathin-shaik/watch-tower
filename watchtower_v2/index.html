@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WatchTower - AI Vision Suite</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #004B87;
+            color: #fff;
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 4px solid #FF6B00;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 0.5rem 0 0;
+            color: #e2e8f0;
+            font-size: 1.1rem;
+        }
+
+        .tab-nav {
+            max-width: 1200px;
+            margin: 20px auto;
+            display: flex;
+            gap: 10px;
+            padding: 0 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-nav button {
+            background-color: #e2e8f0;
+            color: #004B87;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            flex: 1;
+            min-width: 150px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-nav button.active {
+            background-color: #FF6B00;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab-nav button:hover:not(.active) {
+            background-color: #cbd5e0;
+            transform: translateY(-1px);
+        }
+
+        .tab-content {
+            max-width: 1200px;
+            margin: 0 auto 60px;
+            padding: 20px;
+            display: none;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 2px dashed #cbd5e0;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #004B87;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background-color: #FF6B00;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .results img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .results div {
+            margin-top: 15px;
+            padding: 15px;
+            background: #edf2f7;
+            border-radius: 6px;
+            font-size: 1rem;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
+        .error-message {
+            background-color: #fff5f5;
+            color: #c53030;
+            border-left: 4px solid #fc8181;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .success-message {
+            background-color: #f0fff4;
+            color: #2f855a;
+            border-left: 4px solid #68d391;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #004B87;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #004B87;
+            color: #e2e8f0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .tab-nav button {
+                flex: 1 1 calc(50% - 10px);
+            }
+            
+            .button-group button {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>WatchTower</h1>
+        <p>Advanced AI Vision Analysis</p>
+    </header>
+
+    <div class="tab-nav">
+        <button class="active" onclick="openTab('object')">Object Detection</button>
+        <button onclick="openTab('classify')">Image Classification</button>
+        <button onclick="openTab('anomaly')">Defect Detection</button>
+        <button onclick="openTab('ocr')">OCR</button>
+    </div>
+
+    <main>
+        <div class="tab-content active" id="object">
+            <h2>Object Detection</h2>
+            <div class="upload-section">
+                <input type="file" id="objectUpload" accept="image/*" onchange="validateImage(this)">
+                <div class="button-group">
+                    <button onclick="previewImage('object')" id="objectPreviewBtn" disabled>Preview</button>
+                    <button onclick="runInspection('object')" id="objectRunBtn" disabled>Run Detection</button>
+                </div>
+            </div>
+            <div class="loading" id="objectLoading"></div>
+            <div class="results">
+                <img id="objectPreview" src="" alt="Preview" style="display: none;">
+                <div id="objectResult">Upload an image to begin analysis.</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="classify">
+            <h2>Image Classification</h2>
+            <div class="upload-section">
+                <input type="file" id="classifyUpload" accept="image/*" onchange="validateImage(this)">
+                <div class="button-group">
+                    <button onclick="previewImage('classify')" id="classifyPreviewBtn" disabled>Preview</button>
+                    <button onclick="runInspection('classify')" id="classifyRunBtn" disabled>Run Classification</button>
+                </div>
+            </div>
+            <div class="loading" id="classifyLoading"></div>
+            <div class="results">
+                <img id="classifyPreview" src="" alt="Preview" style="display: none;">
+                <div id="classifyResult">Upload an image to begin analysis.</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="anomaly">
+            <h2>Defect Detection</h2>
+            <div class="upload-section">
+                <input type="file" id="anomalyUpload" accept="image/*" onchange="validateImage(this)">
+                <div class="button-group">
+                    <button onclick="previewImage('anomaly')" id="anomalyPreviewBtn" disabled>Preview</button>
+                    <button onclick="runInspection('anomaly')" id="anomalyRunBtn" disabled>Run Detection</button>
+                </div>
+            </div>
+            <div class="loading" id="anomalyLoading"></div>
+            <div class="results">
+                <img id="anomalyPreview" src="" alt="Preview" style="display: none;">
+                <div id="anomalyResult">Upload an image to begin analysis.</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="ocr">
+            <h2>OCR (Text Recognition)</h2>
+            <div class="upload-section">
+                <input type="file" id="ocrUpload" accept="image/*" onchange="validateImage(this)">
+                <div class="button-group">
+                    <button onclick="previewImage('ocr')" id="ocrPreviewBtn" disabled>Preview</button>
+                    <button onclick="runInspection('ocr')" id="ocrRunBtn" disabled>Run OCR</button>
+                </div>
+            </div>
+            <div class="loading" id="ocrLoading"></div>
+            <div class="results">
+                <img id="ocrPreview" src="" alt="Preview" style="display: none;">
+                <div id="ocrResult">Upload an image to begin analysis.</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2024 WatchTower. Powered by Advanced AI</p>
+    </footer>
+
+    <script>
+        function validateImage(input) {
+            const type = input.id.replace('Upload', '');
+            const previewBtn = document.getElementById(`${type}PreviewBtn`);
+            const runBtn = document.getElementById(`${type}RunBtn`);
+            const preview = document.getElementById(`${type}Preview`);
+            const result = document.getElementById(`${type}Result`);
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (!file.type.startsWith('image/')) {
+                    input.value = '';
+                    result.innerHTML = '<div class="error-message">Please upload an image file.</div>';
+                    previewBtn.disabled = true;
+                    runBtn.disabled = true;
+                    preview.style.display = 'none';
+                    return;
+                }
+                previewBtn.disabled = false;
+                runBtn.disabled = false;
+                result.textContent = 'Image ready for analysis.';
+            } else {
+                previewBtn.disabled = true;
+                runBtn.disabled = true;
+                preview.style.display = 'none';
+                result.textContent = 'Upload an image to begin analysis.';
+            }
+        }
+
+        function openTab(tabName) {
+            const tabs = document.getElementsByClassName('tab-content');
+            const buttons = document.getElementsByClassName('tab-nav')[0].getElementsByTagName('button');
+            
+            for (let tab of tabs) {
+                tab.classList.remove('active');
+            }
+            for (let button of buttons) {
+                button.classList.remove('active');
+            }
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function previewImage(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
+            const preview = document.getElementById(`${type}Preview`);
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function runInspection(type) {
+            const fileInput = document.getElementById(`${type}Upload`);
+            const resultDiv = document.getElementById(`${type}Result`);
+            const preview = document.getElementById(`${type}Preview`);
+            const loading = document.getElementById(`${type}Loading`);
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                resultDiv.innerHTML = '<div class="error-message">Please upload an image first.</div>';
+                return;
+            }
+
+            loading.style.display = 'block';
+            resultDiv.textContent = 'Processing...';
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', type);
+
+            try {
+                const response = await fetch('/api/inspect', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<div class="error-message">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                resultDiv.innerHTML = `<div class="success-message">${data.result}</div>`;
+                
+                if (data.image) {
+                    preview.src = data.image;
+                    preview.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

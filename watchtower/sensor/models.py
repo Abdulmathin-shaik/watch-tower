@@ -30,19 +30,37 @@ class Organization(models.Model):
         return self.name
 
 class Sensor(models.Model):
+    SENSOR_TYPES = [
+        ('TEMP', 'Temperature'),
+        ('HUM', 'Humidity'),
+        ('PRES', 'Pressure'),
+    ]
+    
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('inactive', 'Inactive'),
-        ('maintenance', 'Maintenance'),
-        ('error', 'Error'),
+        ('maintenance', 'Maintenance')
     ]
     
     name = models.CharField(max_length=255)
     description = models.TextField()
-    sensor_type = models.ForeignKey(SensorType, on_delete=models.PROTECT)
+    sensor_type = models.CharField(
+        max_length=4, 
+        choices=SENSOR_TYPES,
+        default='TEMP'
+    )
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    organization = models.ForeignKey(
+        Organization, 
+        on_delete=models.CASCADE,
+        null=True,  # Allow null temporarily for migration
+        blank=True
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='active'
+    )
     min_threshold = models.FloatField(null=True, blank=True)
     max_threshold = models.FloatField(null=True, blank=True)
     reading_interval = models.IntegerField(help_text="Reading interval in seconds", default=300)
@@ -52,6 +70,17 @@ class Sensor(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.sensor_type})"
+
+    def save(self, *args, **kwargs):
+        # Ensure all sensors have an organization
+        if not self.organization:
+            # Get or create default organization
+            default_org, _ = Organization.objects.get_or_create(
+                name="Default Organization",
+                defaults={'description': 'Default organization for legacy sensors'}
+            )
+            self.organization = default_org
+        super().save(*args, **kwargs)
 
 class SensorData(models.Model):
     sensor = models.ForeignKey(Sensor, on_delete=models.CASCADE, related_name='readings')

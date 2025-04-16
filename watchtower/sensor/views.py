@@ -5,6 +5,7 @@ from django.db.models import Max, Avg, Min, Count
 from django.db.models.functions import TruncDate, TruncHour
 from django.utils import timezone
 from datetime import timedelta
+from django.views.decorators.csrf import csrf_exempt
 from .models import (
     Sensor, SensorData, SensorType, Location, 
     Organization, Alert, MaintenanceLog
@@ -144,3 +145,42 @@ def calculate_uptime(sensor, start_date, end_date):
         return 100.0
     
     return (total_readings / expected_readings) * 100
+
+@login_required
+def add_sensor(request):
+    if request.method == 'POST':
+        try:
+            # Get the organization (use first one for now)
+            organization = request.user.organizations.first()
+            
+            # Create the sensor
+            sensor = Sensor.objects.create(
+                name=request.POST.get('name'),
+                description=request.POST.get('description', ''),
+                sensor_type=SensorType.objects.get(id=request.POST.get('type')),
+                location=Location.objects.get(id=request.POST.get('location')) if request.POST.get('location') else None,
+                organization=organization,
+                reading_interval=int(request.POST.get('reading_interval', 300)),
+                status='active'
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Sensor created successfully',
+                'sensor': {
+                    'id': sensor.id,
+                    'name': sensor.name,
+                    'type': sensor.sensor_type.name,
+                    'location': sensor.location.name if sensor.location else None
+                }
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    }, status=405)

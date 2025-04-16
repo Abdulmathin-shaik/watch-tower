@@ -131,6 +131,7 @@
             </div>
             <div class="modal-body">
                 <form id="addSensorForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Name</label>
                         <input type="text" class="form-control" required>
@@ -215,9 +216,16 @@
         const form = document.getElementById('addSensorForm');
         const formData = new FormData(form);
         
-        fetch('/sensor/add/', {
+        // Add names to form fields
+        form.querySelector('input[type="text"]').name = 'name';
+        form.querySelector('select[required]').name = 'type';
+        form.querySelector('select:not([required])').name = 'location';
+        form.querySelector('textarea').name = 'description';
+        form.querySelector('input[type="number"]').name = 'reading_interval';
+        
+        fetch('{% url "sensor:add_sensor" %}', {
             method: 'POST',
-            body: formData,
+            body: new FormData(form),
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             }
@@ -225,10 +233,34 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                location.reload();
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addSensorModal'));
+                modal.hide();
+                
+                // Show success message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <strong>Success!</strong> ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.row'));
+                
+                // Reload page after a short delay
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
-                alert('Error adding sensor: ' + data.message);
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger mt-3';
+                errorDiv.textContent = data.message;
+                form.insertBefore(errorDiv, form.firstChild);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding sensor: ' + error.message);
         });
     }
 
