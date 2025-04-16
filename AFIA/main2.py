@@ -3,6 +3,12 @@
 import cv2
 import time
 
+import torch
+
+# Load YOLOv5 model (you can use 'yolov5s', 'yolov5m', etc.)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model.conf = 0.4  # confidence threshold
+
 # Start webcam
 cap = cv2.VideoCapture(0)
 
@@ -42,7 +48,21 @@ while True:
     if motion_detected:
         current_time = time.time()
         if current_time - last_trigger_time > cooldown:
-            print("🎯 Motion detected inside ROI!")
+            print("🎯 Motion detected! Running YOLO...")
+
+            # Run YOLO detection
+            results = model(frame)
+
+            # Print results
+            labels = results.pandas().xyxy[0]['name'].tolist()
+            print("Detected:", labels)
+
+            # Save annotated frame
+            annotated_frame = results.render()[0]
+            filename = f"yolo_result_{int(current_time)}.jpg"
+            cv2.imwrite(filename, annotated_frame)
+            print(f"[Saved] {filename}")
+
             last_trigger_time = current_time
 
     # Display
