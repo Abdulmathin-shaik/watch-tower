@@ -1,4 +1,4 @@
-# from ultralytics import YOLO
+from ultralytics import YOLO
 
 import cv2
 import time
@@ -6,14 +6,15 @@ import time
 import torch
 
 # Load YOLOv5 model (you can use 'yolov5s', 'yolov5m', etc.)
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+# model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model = YOLO('best.pt')  # Load your custom model
 model.conf = 0.4  # confidence threshold
 
 # Start webcam
 cap = cv2.VideoCapture(0)
 
 # Define the Region of Interest (ROI) as a box
-x1, y1, x2, y2 = 200, 100, 500, 500
+x1, y1, x2, y2 = 400, 400, 800, 800
 
 # Background subtractor
 fgbg = cv2.createBackgroundSubtractorMOG2()
@@ -51,17 +52,36 @@ while True:
             print("🎯 Motion detected! Running YOLO...")
 
             # Run YOLO detection
+                        # Run YOLO detection
             results = model(frame)
-
+            
+            # Extract detection labels using boxes
+            detection_labels = []
+            for r in results:
+                if r.boxes is not None and len(r.boxes) > 0:
+                    # Get class indices
+                    class_indices = r.boxes.cls.cpu().numpy()
+                    # Convert to class names
+                    detection_labels.extend([r.names[int(i)] for i in class_indices])
+            
+            # Check if the product has a 'date'
+            if "date" not in detection_labels:
+                print("No date detected for the product!")
+                print("Detected classes:", detection_labels)
+            else:
+                print("Date detected!")
+                print("All detections:", detection_labels)
+            
+            last_trigger_time = current_time
             # Print results
-            labels = results.pandas().xyxy[0]['name'].tolist()
-            print("Detected:", labels)
+            # labels = results.pandas().xyxy[0]['name'].tolist()
+            # print("Detected:", labels)
 
-            # Save annotated frame
-            annotated_frame = results.render()[0]
-            filename = f"yolo_result_{int(current_time)}.jpg"
-            cv2.imwrite(filename, annotated_frame)
-            print(f"[Saved] {filename}")
+            # # Save annotated frame
+            # annotated_frame = results.render()[0]
+            # filename = f"yolo_result_{int(current_time)}.jpg"
+            # cv2.imwrite(filename, annotated_frame)
+            # print(f"[Saved] {filename}")
 
             last_trigger_time = current_time
 
