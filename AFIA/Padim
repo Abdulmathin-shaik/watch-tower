@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""
+padim.py
+
+A simplified PyTorch implementation of PaDiM‐style anomaly detection. 
+This version computes a single global Gaussian over all patch embeddings 
+(from one ResNet layer) of “normal” images, then uses Mahalanobis distance 
+at test time to produce an anomaly heatmap.
+
+Usage:
+    python padim.py train      # computes mean & covariance from data/train/normal
+    python padim.py infer      # runs inference on data/test/*.png, outputs heatmaps
+
+Requirements:
+    torch, torchvision, numpy, pillow, opencv-python
+"""
+
+import os
+import argparse
+import glob
+import json
+import numpy as np
+from PIL import Image
+import cv2
+import torch
+import torch.nn as nn
+import torchvision.transforms as T
+import torchvision.models as models
+
+
+# -----------------------------------------------------------------------------
+# 1) Utility: FeatureExtractor to hook a given ResNet layer
+# -----------------------------------------------------------------------------
+class FeatureExtractor(nn.Module):
+    def __init__(self, layer_name: str = "layer2"):
+        super().__init__()
+        # Load pre-trained ResNet-18 and extract layers up to the one we want.
+        resnet = models.resnet18(pretrained=True)
+        resnet.eval()
+
+        # Keep only layers up to "layer_name"
+        self.features = nn.Sequential()
+        for name, module in resnet.named_children():
+            if name == "fc":
+                break
+            self.features.add_module(name, module)
+            if name == layer_name:
+                break
+
+        # Register forward hook to capture the output of the specified layer
+        self._hook_output = None
+        target_module = dict(self.features.named_modules())[layer_name]
+        target_module.register_forward_hook(self._hook_fn)
+
+    def _hook_fn(self, module, input, output):
+        # When forward is called, this hook saves the output (features) of layer_name
+        self._hook_output = output
+
+    def forward(self, x: torch.Tensor):
+        _ = self.features(x)
+        return self._hook_output  # [B, C, H, W]
+
+
+# -----------------------------------------------------------------------------
+# 2) PaDiM Trainer / Inference Logic
+# -----------------------------------------------------------------------------
+class PaDiM:
+    def __init__(self, layer: str = "layer2", device: str = "cpu"):
+        """
+        layer: which ResNet layer to extract (e.g. 'layer1', 'layer2', 'layer3')
+        device: 'cpu' or 'cuda'
+        """
+        self.device = device
+        self.extractor = FeatureExtractor(layer_name=layer).to(self.device)
+        self.mean = None              # [D]
+        self.cov_inv = None           # [D, D]  (inverse covariance)
+        self.patch_shape = None       # (H, W) of feature map
+        self.feature_dim = None       # D = C
+        self.eps = 1e-6               # for numerical stability in covariance
+
+    def _load_image(self, path: str):
+        """
+        Load an image from disk, convert to RGB, apply transforms.
+        Returns a torch.Tensor [1,3,224,224].
+        """
+        img = Image.open(path).convert("RGB")
+        transform = T.Compose([
+            T.Resize((224, 224)),
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]),
+        ])
+        return transform(img).unsqueeze(0).to(self.device)  # [1,3,224,224]
+
+    def fit(self, normal_dir: str):
+        """
+        1) Iterate over all normal images, extract patch embeddings from the chosen layer.
+        2) Flatten all patches into a big array of shape [N_patches_total, C].
+        3) Compute mean [C] and covariance [C, C], store inverse covariance.
+        """
+        print(f"[PaDiM] Training on normal images in: {normal_dir}")
+        feat_list = []
+
+        with torch.no_grad():
+            for img_path in sorted(glob.glob(os.path.join(normal_dir, "*"))):
+                img_tensor = self._load_image(img_path)           # [1,3,224,224]
+                feats = self.extractor(img_tensor)                 # [1,C,H,W]
+                feats = feats.squeeze(0)                           # [C,H,W]
+                C, H, W = feats.shape
+                if self.feature_dim is None:
+                    self.feature_dim = C
+                    self.patch_shape = (H, W)
+                # Reshape to [H*W, C]
+                patches = feats.permute(1, 2, 0).reshape(-1, C)     # [H*W, C]
+                feat_list.append(patches.cpu().numpy())
+
+        # Stack all patches from every image: [M, C], where M = sum(H*W) over images
+        all_patches = np.vstack(feat_list)                        # [M, C]
+        print(f"[PaDiM] Total patches collected: {all_patches.shape[0]} (dim={self.feature_dim})")
+
+        # Compute mean (C,) and covariance (C,C) with a small epsilon for stability
+        self.mean = np.mean(all_patches, axis=0)                   # [C]
+        cov = np.cov(all_patches, rowvar=False)                    # [C, C]
+        cov += np.eye(self.feature_dim) * self.eps                  # regularization
+        self.cov_inv = np.linalg.inv(cov)                           # [C, C]
+
+        # Save the statistics to disk for later inference
+        stats = {
+            "mean": self.mean.tolist(),
+            "cov_inv": self.cov_inv.tolist(),
+            "feature_dim": self.feature_dim,
+            "patch_shape": self.patch_shape
+        }
+        with open("padim_stats.json", "w") as f:
+            json.dump(stats, f)
+        print("[PaDiM] Training complete. Statistics saved to padim_stats.json.")
+
+    def load_stats(self, stats_path: str = "padim_stats.json"):
+        """
+        Load precomputed mean & inverse covariance from disk.
+        """
+        with open(stats_path, "r") as f:
+            stats = json.load(f)
+        self.mean = np.array(stats["mean"])
+        self.cov_inv = np.array(stats["cov_inv"])
+        self.feature_dim = stats["feature_dim"]
+        self.patch_shape = tuple(stats["patch_shape"])
+        print("[PaDiM] Loaded statistics from:", stats_path)
+
+    def _mahalanobis(self, patches: np.ndarray) -> np.ndarray:
+        """
+        Compute Mahalanobis distance for each patch embedding.
+        patches: [H*W, C]
+        Returns distances: [H*W]
+        """
+        diff = patches - self.mean                                # [H*W, C]
+        # Mahalanobis: sqrt( diff * cov_inv * diff^T ) for each row
+        left = diff.dot(self.cov_inv)                              # [H*W, C]
+        dist2 = np.sum(left * diff, axis=1)                        # [H*W]
+        return np.sqrt(dist2 + 1e-8)                                # [H*W]
+
+    def predict(self, img_path: str, visualize: bool = True):
+        """
+        1) Load and preprocess test image
+        2) Extract features [1, C, H, W] -> [C, H, W]
+        3) Reshape to [H*W, C], compute Mahalanobis distances
+        4) Reshape distances to [H, W], upsample to [224,224], and visualize.
+        """
+        img_tensor = self._load_image(img_path)                     # [1,3,224,224]
+        with torch.no_grad():
+            feats = self.extractor(img_tensor).squeeze(0)           # [C, H, W]
+        C, H, W = feats.shape
+        patches = feats.permute(1, 2, 0).reshape(-1, C).cpu().numpy()  # [H*W, C]
+
+        dists = self._mahalanobis(patches)                          # [H*W]
+        dists_map = dists.reshape(H, W)                             # [H, W]
+
+        # Normalize and upsample to 224×224 for visualization
+        dists_norm = (dists_map - dists_map.min()) / (dists_map.max() - dists_map.min() + 1e-8)
+        heatmap = cv2.resize(dists_norm.astype(np.float32), (224, 224))
+        heatmap = (heatmap * 255).astype(np.uint8)
+        heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
+
+        # Overlay on original image for inspection
+        orig = np.array(Image.open(img_path).convert("RGB").resize((224, 224)))
+        overlay = cv2.addWeighted(orig, 0.6, heatmap_color, 0.4, 0)
+
+        if visualize:
+            cv2.imshow("Input Image", orig)
+            cv2.imshow("Anomaly Heatmap", heatmap_color)
+            cv2.imshow("Overlay", overlay)
+            print("[PaDiM] Press any key to close windows and continue.")
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        # Also return a single anomaly score (mean of top-k patches)
+        topk = int(0.01 * H * W) if H * W >= 100 else 1
+        anomaly_score = np.mean(np.sort(dists)[-topk:])
+        return anomaly_score, heatmap_color, overlay
+
+
+# -----------------------------------------------------------------------------
+# 3) Main: train or infer based on CLI argument
+# -----------------------------------------------------------------------------
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Simplified PaDiM Implementation")
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Train subcommand
+    parser_train = subparsers.add_parser("train", help="Compute mean & cov from normal images")
+    parser_train.add_argument("--train_dir", type=str, default="data/train/normal",
+                              help="Folder containing 'normal' training images")
+
+    # Infer subcommand
+    parser_infer = subparsers.add_parser("infer", help="Run inference on all test images")
+    parser_infer.add_argument("--test_dir", type=str, default="data/test",
+                              help="Folder containing test images")
+    parser_infer.add_argument("--stats", type=str, default="padim_stats.json",
+                              help="Path to saved padim_stats.json")
+
+    args = parser.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    detector = PaDiM(layer="layer2", device=device)
+
+    if args.command == "train":
+        # 1) Compute and save statistics
+        detector.fit(normal_dir=args.train_dir)
+
+    elif args.command == "infer":
+        # 2) Load stats and run inference on each image
+        detector.load_stats(stats_path=args.stats)
+        for img_path in sorted(glob.glob(os.path.join(args.test_dir, "*"))):
+            print(f"\n[PaDiM] Processing {img_path}")
+            score, heatmap_color, overlay = detector.predict(img_path, visualize=False)
+
+            # Save results
+            base = os.path.splitext(os.path.basename(img_path))[0]
+            cv2.imwrite(f"{base}_heatmap.png", heatmap_color)
+            cv2.imwrite(f"{base}_overlay.png", overlay)
+            print(f"[PaDiM] Saved {base}_heatmap.png and {base}_overlay.png. Score = {score:.4f}")
+
+    else:
+        parser.print_help()
